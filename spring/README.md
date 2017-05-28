@@ -23,7 +23,6 @@ Core flow defined in `AbstractApplicationContext#refresh`.
    - Three groups: `PriorityOrdered`, `Ordered`, and unordered.
 
 
-
 ## Bare-Naked Application Context
 
 - Minimum Viable AppCtx (`StaticApplicationContext`) has Six (6) Beans:
@@ -34,11 +33,13 @@ Core flow defined in `AbstractApplicationContext#refresh`.
   - `applicationEventMulticaster`
   - `lifecycleProcessor`
   
-- An Application Context is supposed to detect special beans to include in 
-  the Lifecycle:
-  - `ApplicationListeners`
-  - `BeanFactoryPostProcessor`
-  - `BeanPostProcessor`
+- An Application Contexts (and friends) scan for special types of beans and
+  registers them:
+  - `ApplicationListener`s (by `AbstractApplicationContext`)
+  - `Lifecycle`s (by `DefaultLifecycleProcessor`)
+  - `BeanFactoryPostProcessor`s (by `PostProcessorRegistrationDelegate`)
+  - `BeanPostProcessor`s (by `PostProcessorRegistrationDelegate`)
+  - `LoadTimeWeaverAware` (by `AbstractApplicationContext`)
   
 ## Annotation Configured Application Context
 
@@ -56,8 +57,13 @@ Includes these additional beans (invoked in this order):
 - `o.s.c.event.internalEventListenerProcessor`
 
 
+## Events
 
-## Application Context Lifecycle Events
+Don't confuse ApplicationContext Lifecycle Events with ApplicationEvents:
+the former describe events on the container itself, especially during
+start-up; the later describe...
+
+### Application Context Lifecycle Events
 
 1. ApplicationStartedEvent
 2. ApplicationEnvironmentPreparedEvent
@@ -65,3 +71,66 @@ Includes these additional beans (invoked in this order):
 4. ContextRefreshedEvent
 5. EmbeddedServletContainerInitializedEvent
 6. ApplicationReadyEvent
+
+## Logging Use-Cases
+
+### Registering Beans
+
+- `org.springframework.beans`
+- `org.springframework.context.annotation.ClassPathBeanDefinitionScanner`
+
+
+## Lifecycles
+
+Referring to the Spring feature wherein individual beans indicate they themselves
+have a lifecycle that should be triggered.
+
+Q: these were introduced circa Spring 3... are they useful to know?
+
+## Configuration Sources in Spring Boot
+
+Knowing the start-up flow of an Application Context (and how the test harnesses work) can greatly improve your ability to anticipate in what order property sources are searched:
+
+1. ...
+1. `BeanFactoryPostProcessor`s are executed, including that from the `ConfigFileApplicationListener`, which is run at near-highest precedence in the "Ordered" group of BFPPs.  This BFPP ensures that the `application.properties` and friends are _last_ in the property source search order.
+  - For every Profile (in reverse order as named in `spring.profiles.active`, then `spring.profiles.include`, finally the so-called default profile), `application-{profile}.properties`, this component searches for that file at the following paths (in this order):
+    1. `file:./config`
+    1. `file:./`
+    1. `classpath:./config`
+    1. `classpath:./`
+1. 
+
+## Spring Factories
+
+- Since Spring 3.2
+- `SpringApplication`, on initialization, [loads](https://github.com/spring-projects/spring-boot/blob/v1.5.2.RELEASE/spring-boot/src/main/java/org/springframework/boot/SpringApplication.java#L255) via the Spring Factories feature (see also [spring.factories](https://github.com/spring-projects/spring-boot/blob/master/spring-boot/src/main/resources/META-INF/spring.factories)).
+  - `ApplicationContextInitializer`s
+  - `ApplicationListener`s
+  
+
+## Aspect-Oriented Programming
+
+### With IntelliJ support
+
+- Gutter icon treatment only works for `@Component`-registered beans.
+- IntelliJ  `@EnableAspectJAutoProxy(proxyTargetClass = true)`.
+
+
+
+## Uncategorized Bits of Knowledge
+
+- `org.springframework.core.env.AbstractEnvironment#isProfileActive` implements the `@Profile` feature.
+  - while `spring.profiles.active` is implemented here, `spring.profiles.include`
+    is actually a Spring Boot feature ()
+- When you are specifying a `basePackage` for bean scanning, that value
+  can contain placeholder properties:
+  ```java
+    System.setProperty("rootPackage", "hello");
+    AnnotationConfigApplicationContext appCtx = new AnnotationConfigApplicationContext();
+    appCtx.scan("${rootPackage}.simple");
+  ```
+- When Spring loads property files, it actually delegates to the [`java.util.Properties`](https://docs.oracle.com/javase/8/docs/api/java/util/Properties.html) class to do so.
+  - _(fun but likely-useless)_ this means that properties can be loaded in XML format (because `Properties` implements that).  Also fun is that the Spring's property loading utility specifically continues to support loading files with the `.xml` suffix.
+  
+ 
+
