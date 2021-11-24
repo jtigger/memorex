@@ -46,6 +46,27 @@ Espresso is superior to Robotium:
 >
 *source: [Google Codelabs — Android Testing](https://codelabs.developers.google.com/codelabs/android-testing/index.html?index=..%2F..%2Findex#6)*
 
+# Patterns/Techniques
+
+## Handling (Runtime) Permissions
+
+* If you do not request permissions at install time, your app can request the permission at runtime.
+* Espresso cannot reach the views presented by the system (different process); so you can't acknowledge the permissions dialog.
+* Skip this detail in your Journey Test by granting permissions ahead-of-time.
+
+In the test prep script, include: 
+```bash
+$ANDROID_SDK_HOME/platform-tools/adb shell pm grant <package-id> <permission-name>
+```
+
+# Gotchas
+
+## `RecyclerView` scrolls, but item not visible.
+
+If your `RecyclerView` is not guaranteed to be completely visible, scrolling to an item may succeed yet the item not be actually visible.
+The best solution would be to scroll the screen so that the entire `RecyclerView` is visible.
+A potential workaround is to use [LinearLayoutManager#scrollToPositionWithOffset(int, int)](https://developer.android.com/reference/android/support/v7/widget/LinearLayoutManager.html#scrollToPositionWithOffset(int, int)).
+
 # Resources
 
 * [Google Codelabs](https://codelabs.developers.google.com/?cat=Android)
